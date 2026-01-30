@@ -118,7 +118,7 @@
             // 监听地图加载错误
             map.on('error', function(e) {
                 console.error("AMap Error:", e);
-                reportError("Auth Failed: Check Key/Code");
+                alert("Map Error: " + JSON.stringify(e));
             });
 
             map.on('complete', () => {
