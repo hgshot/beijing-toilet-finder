@@ -4,97 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Beijing Finder Pro</title>
-    <script>
-        window._AMapSecurityConfig = { securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3' };
-    </script>
-    <script src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking"></script>
     <style>
         :root { --p: #007AFF; --g: rgba(255, 255, 255, 0.96); --s: 0 4px 16px rgba(0,0,0,0.15); }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #f2f2f7; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #e6e6e6; }
         
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; opacity: 0; transition: opacity 0.5s ease; }
-        #map.loaded { opacity: 1; }
-
-        /* Loader */
-        .loader { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .spinner { width: 30px; height: 30px; border: 3px solid #ddd; border-top-color: var(--p); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        .load-txt { font-size: 12px; color: #999; font-weight: 500; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Top Bar */
+        /* 顶部栏 */
         .top-bar {
             position: absolute; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%);
             width: 88%; max-width: 380px; background: var(--g); padding: 8px 16px;
             border-radius: 24px; box-shadow: var(--s); z-index: 10;
-            display: flex; justify-content: space-between; align-items: center;
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(15px);
         }
-        .lang-info { font-size: 13px; font-weight: 700; color: #1d1d1f; }
-        select { border: none; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 14px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; -webkit-appearance: none; }
+        select { border: none; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
 
-        /* Bottom Hub */
+        /* 底部 Hub */
         .bottom-hub {
             position: absolute; bottom: calc(env(safe-area-inset-bottom, 20px) + 10px);
             left: 50%; transform: translateX(-50%); width: 92%; max-width: 400px;
             display: flex; align-items: center; gap: 12px; z-index: 10;
         }
-        .slider-card {
-            flex: 1; background: var(--g); padding: 14px 18px; border-radius: 20px;
-            box-shadow: var(--s); display: flex; align-items: center; gap: 12px;
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-        }
-        input[type=range] { flex: 1; accent-color: var(--p); height: 4px; cursor: pointer; }
-        .v { font-size: 13px; font-weight: 800; color: var(--p); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+        .slider-card { flex: 1; background: var(--g); padding: 14px 18px; border-radius: 20px; box-shadow: var(--s); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(15px); }
+        input[type=range] { flex: 1; accent-color: var(--p); cursor: pointer; }
+        .v { font-size: 13px; font-weight: 800; color: var(--p); min-width: 44px; text-align: right; }
+        .re-btn { width: 54px; height: 54px; background: #fff; border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: var(--s); cursor: pointer; flex-shrink: 0; }
 
-        .re-btn {
-            width: 54px; height: 54px; background: #fff; border-radius: 18px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: var(--s); cursor: pointer; flex-shrink: 0;
-        }
-
-        /* ---------------- 自定义图标样式 ---------------- */
-        .marker-toilet {
-            width: 36px; height: 36px; background: #fff; border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;
-            border: 2px solid #007AFF; transform: translate(-50%, -50%);
-        }
-        .marker-user {
-            width: 40px; height: 40px; 
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4));
-            animation: bounce 2s infinite;
-        }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-
-        /* ---------------- 弹窗样式优化 ---------------- */
-        .pop { min-width: 180px; padding: 5px 0; }
-        .pop h4 { margin: 0 0 5px 0; font-size: 15px; color: #000; }
-        .stats { font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
-        .stats .time { color: #007AFF; font-weight: 700; }
-        
-        /* 折叠菜单 */
-        details { margin-top: 8px; border-top: 1px solid #eee; }
-        summary { 
-            padding: 8px 0; cursor: pointer; font-size: 12px; color: #555; font-weight: 600; list-style: none; outline: none; 
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        summary::after { content: '▾'; font-size: 14px; color: #999; }
-        details[open] summary::after { content: '▴'; }
-        
-        .ext-btn { 
-            display: block; padding: 8px; margin-bottom: 5px; border-radius: 8px; 
-            text-decoration: none; color: #fff; font-size: 12px; font-weight: 600; text-align: center; 
-        }
+        /* 弹窗与加载 */
+        .pop { min-width: 170px; padding: 4px 0; }
+        .stats { font-size: 13px; color: #007AFF; font-weight: 700; margin: 4px 0 8px; }
+        details { border-top: 1px solid #eee; margin-top: 8px; }
+        summary { padding: 8px 0; cursor: pointer; font-size: 12px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+        .ext-btn { display: block; padding: 10px; border-radius: 8px; text-decoration: none; color: #fff; font-size: 12px; font-weight: 700; text-align: center; margin-bottom: 6px; }
         .amap-copyright, .amap-mclogo { display: none !important; }
+        .loader { position: fixed; top: 45%; left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; color: #666; font-size: 12px; font-weight: 500; }
+        .spinner { width: 24px; height: 24px; border: 3px solid #ddd; border-top-color: var(--p); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div class="loader" id="loader"><div class="spinner"></div><div class="load-txt">Loading Map...</div></div>
+<div class="loader" id="ld"><div class="spinner"></div>Loading...</div>
 
 <div class="top-bar">
-    <div class="lang-info" id="curLangTxt">English</div>
-    <select id="langSelect">
-        <option value="en" selected>More / Change</option>
+    <div id="curL">English</div>
+    <select id="lS">
+        <option value="en">Change Language</option>
         <option value="ko">한국어</option>
         <option value="ja">日本語</option>
         <option value="es">Español</option>
@@ -107,184 +61,136 @@
         <input type="range" id="r" min="500" max="2500" step="500" value="1000">
         <span class="v" id="rv">1.0km</span>
     </div>
-    <div class="re-btn" id="re">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="var(--p)"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
-    </div>
+    <div class="re-btn" id="re"><svg viewBox="0 0 24 24" width="26" height="26" fill="var(--p)"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></div>
 </div>
 
 <div id="map"></div>
 
 <script>
-    const i18n = {
-        en:{n:"English",t:"Public Toilet",g:"Open App", dist:"Distance", walk:"Walk"}, 
-        ko:{n:"한국어",t:"공중화장실",g:"앱 열기", dist:"거리", walk:"보행"},
-        ja:{n:"日本語",t:"公衆便所",g:"アプリを開く", dist:"距離", walk:"徒歩"}, 
-        es:{n:"Español",t:"Baño Público",g:"Abrir App", dist:"Distancia", walk:"A pie"}, 
-        fr:{n:"Français",t:"Toilettes",g:"Ouvrir App", dist:"Distance", walk:"Marche"}
+    // -----------------------------------------------------------
+    // 1. 安全配置 (必须最先执行)
+    // -----------------------------------------------------------
+    window._AMapSecurityConfig = { 
+        securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3' 
     };
-    let curL='en', map, ps, geo, walker, timer, rad=1000;
-    let userMarker, routeLine, currentInfoWindow;
-    let userPos = null; // 存储用户实时坐标
+    const KEY = '27cb9ef31045cd08c4eae5263589ccc4';
+    // -----------------------------------------------------------
 
-    // SVG 图标资源
-    const svgToilet = `<svg viewBox="0 0 24 24" width="20" height="20" fill="#007AFF"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>`;
-    const svgUser = `<svg viewBox="0 0 496 512" width="40" height="40" fill="#F4A000" stroke="white" stroke-width="10"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
+    const i18n = {
+        en:{n:"English",t:"Toilet",g:"Open App"}, ko:{n:"한국어",t:"화장실",g:"앱 열기"},
+        ja:{n:"日本語",t:"トイレ",g:"アプリ"}, es:{n:"Español",t:"Baño",g:"Abrir"}, fr:{n:"Français",t:"Toilettes",g:"Ouvrir"}
+    };
 
-    const init = () => {
-        try {
-            map = new AMap.Map('map', { zoom: 15, center: [116.397, 39.909], viewMode: '2D' });
+    let curL='en', map, ps, geo, walker, rad=1000, userPos=null, userM, routeL, timer;
+
+    // 2. 动态加载脚本
+    const loadScript = () => {
+        const script = document.createElement('script');
+        script.src = `https://webapi.amap.com/maps?v=2.0&key=${KEY}&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking`;
+        script.onload = initMap;
+        script.onerror = () => document.getElementById('ld').innerHTML = "Error: Key/Network Invalid";
+        document.head.appendChild(script);
+    };
+
+    // 3. 地图初始化
+    const initMap = () => {
+        map = new AMap.Map('map', { zoom: 15, center: [116.397, 39.909] });
+        
+        map.on('complete', () => {
+            document.getElementById('ld').style.display = 'none';
             
-            map.on('complete', () => {
-                document.getElementById('map').classList.add('loaded');
-                document.getElementById('loader').style.display = 'none';
-                
-                AMap.plugin(['AMap.PlaceSearch','AMap.Geolocation','AMap.Walking'], () => {
-                    ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 35 });
-                    walker = new AMap.Walking(); // 初始化步行路由
-                    
-                    geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
-                    
-                    // 持续监听位置，更新小人位置
-                    geo.watchPosition();
-                    AMap.event.addListener(geo, 'complete', (data) => {
-                        userPos = data.position;
-                        updateUserMarker(data.position);
-                        if(!userMarker) { map.setZoomAndCenter(16, userPos); search(); } // 首次定位成功
-                    });
-                    
-                    // 首次尝试定位
-                    geo.getCurrentPosition();
-                });
+            ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 35 });
+            walker = new AMap.Walking();
+            geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
+            
+            // 尝试获取位置，如果成功则更新小人
+            geo.getCurrentPosition((s, r) => {
+                if(s==='complete') { 
+                    userPos = r.position; 
+                    updateUM(r.position); 
+                    map.panTo(r.position);
+                }
             });
-        } catch(e) { document.querySelector('.load-txt').innerText = "Network Error"; }
+            // 实时监听移动
+            geo.watchPosition();
+            AMap.event.addListener(geo, 'complete', d => { userPos = d.position; updateUM(d.position); });
 
+            search();
+        });
+        
         map.on('moveend', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
-        map.on('click', clearRoute); // 点击地图空白处清理路线
     };
 
     // 更新用户小人位置
-    const updateUserMarker = (pos) => {
-        if (userMarker) {
-            userMarker.setPosition(pos);
-        } else {
-            userMarker = new AMap.Marker({
-                position: pos,
-                content: `<div class="marker-user">${svgUser}</div>`,
-                offset: new AMap.Pixel(-20, -40),
-                zIndex: 999,
-                map: map
-            });
-        }
+    const updateUM = (pos) => {
+        const svg = `<svg viewBox="0 0 496 512" width="40" height="40" fill="#F4A000" stroke="white" stroke-width="15"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
+        if (userM) userM.setPosition(pos);
+        else userM = new AMap.Marker({ position: pos, content: `<div style="animation: bounce 2s infinite;">${svg}</div>`, offset: new AMap.Pixel(-20, -40), map: map });
     };
 
+    // 搜索厕所
     const search = () => {
-        if(!ps || !map) return;
+        if(!ps) return;
         ps.searchNearBy('', map.getCenter(), rad, (s, r) => {
-            // 不清除用户marker和路线，只清除厕所marker
-            const allOverlays = map.getAllOverlays('marker');
-            allOverlays.forEach(m => { if(m !== userMarker) map.remove(m); });
-
+            // 清理旧厕所标记，保留用户小人
+            map.getAllOverlays('marker').forEach(m => { if(m !== userM) map.remove(m); });
+            
             if(s==='complete' && r.poiList) {
                 r.poiList.pois.forEach(p => {
-                    // 创建自定义厕所 Marker
+                    // 自定义厕所图标
                     const m = new AMap.Marker({
                         position: p.location,
-                        content: `<div class="marker-toilet">${svgToilet}</div>`,
-                        offset: new AMap.Pixel(-18, -18),
-                        map: map
+                        content: `<div style="width:34px;height:34px;background:#fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;border:2px solid #007AFF"><svg viewBox="0 0 24 24" width="20" height="20" fill="#007AFF"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg></div>`,
+                        offset: new AMap.Pixel(-17, -17), map: map
                     });
-                    m.on('click', () => showDetail(p));
+                    
+                    // 点击厕所：画线 + 弹窗
+                    m.on('click', () => {
+                        if(routeL) map.remove(routeL); // 清除旧线
+                        
+                        // 规划路线回调
+                        const onRouteFound = (time, dist) => {
+                            const content = `
+                                <div class="pop">
+                                    <h4>${p.name}</h4>
+                                    <div class="stats">${time} • ${dist}</div>
+                                    <details>
+                                        <summary>${i18n[curL].g}</summary>
+                                        <a href="http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w" class="ext-btn" style="background:#000">Apple Maps</a>
+                                        <a href="https://www.google.com/maps/dir/?api=1&destination=${p.location.lat},${p.location.lng}&travelmode=walking" class="ext-btn" style="background:#34A853">Google Maps</a>
+                                    </details>
+                                </div>`;
+                            new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -25) }).open(map, p.location);
+                        };
+
+                        // 如果有用户位置，则规划路径
+                        if(userPos) {
+                            walker.search(userPos, p.location, (status, res) => {
+                                let t="...", d="...";
+                                if(status==='complete') {
+                                    routeL = new AMap.Polyline({ path: res.routes[0].steps.flatMap(s => s.path), strokeColor: "#007AFF", strokeOpacity: 0.8, strokeWeight: 6, map: map });
+                                    t = Math.round(res.routes[0].time/60) + " min";
+                                    d = res.routes[0].distance + " m";
+                                }
+                                onRouteFound(t, d);
+                            });
+                        } else {
+                            onRouteFound("?", "?"); // 无定位时仅显示弹窗
+                        }
+                    });
                 });
             }
         });
     };
 
-    // 显示详情并规划路线
-    const showDetail = (poi) => {
-        clearRoute(); // 清除旧路线
-        
-        // 1. 如果有用户坐标，先画线并计算距离
-        if (userPos) {
-            walker.search(userPos, poi.location, (status, result) => {
-                let timeStr = "...", distStr = "...";
-                if (status === 'complete') {
-                    // 绘制路线
-                    const path = result.routes[0].steps.flatMap(step => step.path);
-                    routeLine = new AMap.Polyline({
-                        path: path,
-                        strokeColor: "#007AFF", strokeOpacity: 0.8, strokeWeight: 6,
-                        lineJoin: 'round', lineCap: 'round', map: map
-                    });
-                    
-                    // 获取数据
-                    const dur = Math.round(result.routes[0].time / 60);
-                    const dis = result.routes[0].distance;
-                    timeStr = `${dur} min`;
-                    distStr = `${dis} m`;
-                }
-                updateInfoWindow(poi, timeStr, distStr);
-            });
-        } else {
-            updateInfoWindow(poi, "?", "?");
-        }
-    };
+    // 交互事件
+    document.getElementById('lS').onchange = e => { curL = e.target.value; document.getElementById('curL').innerText = i18n[curL].n; search(); };
+    document.getElementById('r').oninput = e => { rad = parseInt(e.target.value); document.getElementById('rv').innerText = (rad/1000).toFixed(1)+'km'; clearTimeout(timer); timer = setTimeout(search, 250); };
+    document.getElementById('re').onclick = () => { if(geo) geo.getCurrentPosition((s, r) => { if(s==='complete') { userPos = r.position; updateUM(r.position); map.setZoomAndCenter(17, r.position); search(); } }); };
 
-    // 渲染 InfoWindow 内容
-    const updateInfoWindow = (poi, time, dist) => {
-        const appleUrl = `http://maps.apple.com/?daddr=${poi.location.lat},${poi.location.lng}&dirflg=w`;
-        const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${poi.location.lat},${poi.location.lng}&travelmode=walking`;
-        
-        const content = `
-            <div class="pop">
-                <h4>${poi.name}</h4>
-                <div class="stats">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#007AFF"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                    <span class="time">${time}</span> • ${dist}
-                </div>
-                
-                <details>
-                    <summary>${i18n[curL].g}</summary>
-                    <a href="${appleUrl}" class="ext-btn" style="background:#000">Apple Maps</a>
-                    <a href="${googleUrl}" class="ext-btn" style="background:#34A853">Google Maps</a>
-                </details>
-            </div>`;
-
-        currentInfoWindow = new AMap.InfoWindow({
-            content: content,
-            offset: new AMap.Pixel(0, -25)
-        });
-        currentInfoWindow.open(map, poi.location);
-    };
-
-    const clearRoute = () => {
-        if(routeLine) { map.remove(routeLine); routeLine = null; }
-    };
-
-    // UI Event Listeners
-    document.getElementById('langSelect').onchange = (e) => {
-        curL = e.target.value;
-        document.getElementById('curLangTxt').innerText = i18n[curL].n;
-        search();
-    };
-
-    document.getElementById('r').oninput = (e) => {
-        rad = parseInt(e.target.value);
-        document.getElementById('rv').innerText = (rad/1000).toFixed(1)+'km';
-        clearTimeout(timer); timer = setTimeout(search, 250);
-    };
-
-    document.getElementById('re').onclick = () => {
-        if(geo) geo.getCurrentPosition((s, r) => {
-            if(s==='complete') { 
-                userPos = r.position;
-                map.setZoomAndCenter(17, userPos); 
-                updateUserMarker(userPos);
-                search(); 
-            }
-        });
-    };
-
-    window.onload = init;
+    // 启动加载
+    window.onload = loadScript;
 </script>
+<style>@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }</style>
 </body>
 </html>
