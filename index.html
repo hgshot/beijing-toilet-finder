@@ -4,13 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Beijing Finder Pro</title>
-
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#51A1B4">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png">
-
     <script type="text/javascript">
         window._AMapSecurityConfig = { securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3' };
     </script>
@@ -20,9 +13,9 @@
         :root { --p: #51A1B4; --g: rgba(255, 255, 255, 0.98); --s: 0 4px 16px rgba(0,0,0,0.15); }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #fff; }
         
-        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100%; z-index: 1; display: block; }
+        /* 强制地图容器物理尺寸 */
+        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100% !important; height: 100% !important; z-index: 1; display: block; }
 
-        /* 顶部栏保持原样 */
         .top-bar {
             position: absolute; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%);
             width: 88%; max-width: 380px; background: var(--g); padding: 8px 16px;
@@ -32,17 +25,17 @@
         .lang-info { font-size: 13px; font-weight: 700; color: #1d1d1f; }
         select { border: none; background: #f0f0f0; padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
 
-        /* 底部操作区：重新布局为左右对称 */
-        .btn-action {
+        /* 底部操作按钮 - 完全镜像对称布局 */
+        .btn-ui {
             position: absolute; bottom: calc(env(safe-area-inset-bottom, 20px) + 10px);
             width: 54px; height: 54px; background: #fff; border-radius: 18px;
             display: flex; align-items: center; justify-content: center;
             box-shadow: var(--s); z-index: 100; cursor: pointer;
         }
-        /* 左下角刷新 */
-        .refresh-btn { left: 20px; }
-        /* 右下角定位 */
-        .locate-btn { right: 20px; }
+        /* 左刷新 */
+        .btn-refresh { left: 20px; }
+        /* 右定位 */
+        .btn-re { right: 20px; }
 
         .pop { min-width: 170px; padding: 4px 0; }
         .stats { font-size: 13px; color: var(--p); font-weight: 700; margin: 4px 0 8px; }
@@ -66,16 +59,12 @@
     </select>
 </div>
 
-<div class="btn-action refresh-btn" onclick="window.location.reload()">
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="#FF3B30">
-        <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-8 3.58-8 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-    </svg>
+<div class="btn-ui btn-refresh" onclick="location.reload()">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="#FF3B30"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-8 3.58-8 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
 </div>
 
-<div class="btn-action locate-btn" id="re">
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="#007AFF">
-        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
-    </svg>
+<div class="btn-ui btn-re" id="re">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="#007AFF"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
 </div>
 
 <div id="map"></div>
@@ -98,16 +87,14 @@
         </div>
     `;
 
+    // --- 完全保留 v13.0 原始成功代码段 ---
     const initMap = () => {
         try {
-            // 完全保留 v13.0 的初始化参数：默认有中心点，无任何淡入动画
             map = new AMap.Map('map', { zoom: 15, center: [116.397, 39.909], viewMode: '2D' });
-
             map.on('complete', () => {
                 ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 40 });
                 walker = new AMap.Walking();
                 geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
-                
                 geo.getCurrentPosition((s, r) => {
                     if(s==='complete') {
                         userPos = r.position;
@@ -116,15 +103,7 @@
                     }
                     search();
                 });
-
-                // 保持持续监听位置
-                geo.watchPosition();
-                AMap.event.addListener(geo, 'complete', d => {
-                    userPos = d.position;
-                    updateUM(d.position);
-                });
             });
-
             map.on('moveend', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
         } catch (e) { console.error(e); }
     };
@@ -141,12 +120,7 @@
             map.getAllOverlays('marker').forEach(m => { if(m !== userM) map.remove(m); });
             if(s==='complete' && r.poiList) {
                 r.poiList.pois.forEach(p => {
-                    const m = new AMap.Marker({
-                        position: p.location,
-                        content: wcIconContent,
-                        offset: new AMap.Pixel(-17, -42),
-                        map: map
-                    });
+                    const m = new AMap.Marker({ position: p.location, content: wcIconContent, offset: new AMap.Pixel(-17, -42), map: map });
                     m.on('click', () => {
                         if(routeL) map.remove(routeL);
                         if(userPos) walker.search(userPos, p.location, (status, res) => {
