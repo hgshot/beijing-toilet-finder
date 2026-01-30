@@ -1,16 +1,16 @@
 {
-  "short_name": "BJ Toilet",
-  "name": "Beijing Public Toilet Finder",
+  "short_name": "BJ Toilet Finder",
+  "name": "Beijing Toilet Finder",
   "description": "Find public toilets in Beijing with real-time navigation and walking routes.",
   "icons": [
     {
-      "src": "icon-512.png",
+      "src": "icon.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-192.png",
+      "src": "icon.png",
       "type": "image/png",
       "sizes": "192x192"
     }
