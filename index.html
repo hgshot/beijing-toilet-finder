@@ -4,10 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Beijing Finder Pro</title>
+    
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3'
+        }
+    </script>
+
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking"></script>
+
     <style>
         :root { --p: #007AFF; --g: rgba(255, 255, 255, 0.96); --s: 0 4px 16px rgba(0,0,0,0.15); }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #f2f2f7; }
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #e6e6e6; }
+        
+        /* 错误提示框 (仅出错时显示) */
+        #error-box {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; background: rgba(0,0,0,0.8); color: #ff6b6b; padding: 20px;
+            border-radius: 12px; z-index: 999; text-align: center; font-size: 14px; line-height: 1.5;
+        }
+
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #e0e0e0; }
         
         /* 顶部栏 */
         .top-bar {
@@ -43,7 +60,8 @@
 </head>
 <body>
 
-<div class="loader" id="ld"><div class="spinner"></div>Loading...</div>
+<div id="error-box"></div>
+<div class="loader" id="ld"><div class="spinner"></div>Loading Map...</div>
 
 <div class="top-bar">
     <div id="curL">English</div>
@@ -67,15 +85,6 @@
 <div id="map"></div>
 
 <script>
-    // -----------------------------------------------------------
-    // 1. 安全配置 (必须最先执行)
-    // -----------------------------------------------------------
-    window._AMapSecurityConfig = { 
-        securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3' 
-    };
-    const KEY = '27cb9ef31045cd08c4eae5263589ccc4';
-    // -----------------------------------------------------------
-
     const i18n = {
         en:{n:"English",t:"Toilet",g:"Open App"}, ko:{n:"한국어",t:"화장실",g:"앱 열기"},
         ja:{n:"日本語",t:"トイレ",g:"アプリ"}, es:{n:"Español",t:"Baño",g:"Abrir"}, fr:{n:"Français",t:"Toilettes",g:"Ouvrir"}
@@ -83,113 +92,106 @@
 
     let curL='en', map, ps, geo, walker, rad=1000, userPos=null, userM, routeL, timer;
 
-    // 2. 动态加载脚本
-    const loadScript = () => {
-        const script = document.createElement('script');
-        script.src = `https://webapi.amap.com/maps?v=2.0&key=${KEY}&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking`;
-        script.onload = initMap;
-        script.onerror = () => document.getElementById('ld').innerHTML = "Error: Key/Network Invalid";
-        document.head.appendChild(script);
-    };
+    // 屏幕错误报告
+    function reportError(msg) {
+        document.getElementById('ld').style.display = 'none';
+        const box = document.getElementById('error-box');
+        box.style.display = 'block';
+        box.innerHTML = `⚠️ <strong>Map Load Error</strong><br>${msg}<br><br><small>请按 F12 查看 Console 详细报错</small>`;
+    }
 
-    // 3. 地图初始化
-    const initMap = () => {
-        map = new AMap.Map('map', { zoom: 15, center: [116.397, 39.909] });
-        
-        map.on('complete', () => {
-            document.getElementById('ld').style.display = 'none';
-            
-            ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 35 });
-            walker = new AMap.Walking();
-            geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
-            
-            // 尝试获取位置，如果成功则更新小人
-            geo.getCurrentPosition((s, r) => {
-                if(s==='complete') { 
-                    userPos = r.position; 
-                    updateUM(r.position); 
-                    map.panTo(r.position);
-                }
+    function init() {
+        // 检查 API 是否加载
+        if (typeof AMap === 'undefined') {
+            reportError("Network Blocked: AMap JS not loaded.");
+            return;
+        }
+
+        try {
+            map = new AMap.Map('map', { 
+                zoom: 15, 
+                center: [116.397, 39.909],
+                viewMode: '2D', // 强制2D，兼容性最好
+                resizeEnable: true
             });
-            // 实时监听移动
-            geo.watchPosition();
-            AMap.event.addListener(geo, 'complete', d => { userPos = d.position; updateUM(d.position); });
+            
+            // 监听地图加载错误
+            map.on('error', function(e) {
+                console.error("AMap Error:", e);
+                reportError("Auth Failed: Check Key/Code");
+            });
 
-            search();
-        });
-        
+            map.on('complete', () => {
+                document.getElementById('ld').style.display = 'none';
+                
+                AMap.plugin(['AMap.PlaceSearch','AMap.Geolocation','AMap.Walking'], function(){
+                    ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 35 });
+                    walker = new AMap.Walking();
+                    geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
+                    
+                    geo.getCurrentPosition((s, r) => {
+                        if(s==='complete') { 
+                            userPos = r.position; 
+                            updateUM(r.position); 
+                            map.panTo(r.position);
+                        }
+                    });
+                    geo.watchPosition();
+                    AMap.event.addListener(geo, 'complete', d => { userPos = d.position; updateUM(d.position); });
+                });
+                
+                search();
+            });
+        } catch(err) {
+            reportError(err.message);
+        }
+
         map.on('moveend', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
-    };
+    }
 
-    // 更新用户小人位置
+    // 更新小人
     const updateUM = (pos) => {
         const svg = `<svg viewBox="0 0 496 512" width="40" height="40" fill="#F4A000" stroke="white" stroke-width="15"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
         if (userM) userM.setPosition(pos);
         else userM = new AMap.Marker({ position: pos, content: `<div style="animation: bounce 2s infinite;">${svg}</div>`, offset: new AMap.Pixel(-20, -40), map: map });
     };
 
-    // 搜索厕所
+    // 搜索
     const search = () => {
         if(!ps) return;
         ps.searchNearBy('', map.getCenter(), rad, (s, r) => {
-            // 清理旧厕所标记，保留用户小人
             map.getAllOverlays('marker').forEach(m => { if(m !== userM) map.remove(m); });
-            
             if(s==='complete' && r.poiList) {
                 r.poiList.pois.forEach(p => {
-                    // 自定义厕所图标
                     const m = new AMap.Marker({
                         position: p.location,
                         content: `<div style="width:34px;height:34px;background:#fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;border:2px solid #007AFF"><svg viewBox="0 0 24 24" width="20" height="20" fill="#007AFF"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg></div>`,
                         offset: new AMap.Pixel(-17, -17), map: map
                     });
-                    
-                    // 点击厕所：画线 + 弹窗
                     m.on('click', () => {
-                        if(routeL) map.remove(routeL); // 清除旧线
-                        
-                        // 规划路线回调
-                        const onRouteFound = (time, dist) => {
-                            const content = `
-                                <div class="pop">
-                                    <h4>${p.name}</h4>
-                                    <div class="stats">${time} • ${dist}</div>
-                                    <details>
-                                        <summary>${i18n[curL].g}</summary>
-                                        <a href="http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w" class="ext-btn" style="background:#000">Apple Maps</a>
-                                        <a href="https://www.google.com/maps/dir/?api=1&destination=${p.location.lat},${p.location.lng}&travelmode=walking" class="ext-btn" style="background:#34A853">Google Maps</a>
-                                    </details>
-                                </div>`;
+                        if(routeL) map.remove(routeL);
+                        const drawInfo = (t, d) => {
+                            const content = `<div class="pop"><h4>${p.name}</h4><div class="stats">${t} • ${d}</div><details><summary>${i18n[curL].g}</summary><a href="http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w" class="ext-btn" style="background:#000">Apple Maps</a><a href="https://www.google.com/maps/dir/?api=1&destination=${p.location.lat},${p.location.lng}&travelmode=walking" class="ext-btn" style="background:#34A853">Google Maps</a></details></div>`;
                             new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -25) }).open(map, p.location);
                         };
-
-                        // 如果有用户位置，则规划路径
-                        if(userPos) {
-                            walker.search(userPos, p.location, (status, res) => {
-                                let t="...", d="...";
-                                if(status==='complete') {
-                                    routeL = new AMap.Polyline({ path: res.routes[0].steps.flatMap(s => s.path), strokeColor: "#007AFF", strokeOpacity: 0.8, strokeWeight: 6, map: map });
-                                    t = Math.round(res.routes[0].time/60) + " min";
-                                    d = res.routes[0].distance + " m";
-                                }
-                                onRouteFound(t, d);
-                            });
-                        } else {
-                            onRouteFound("?", "?"); // 无定位时仅显示弹窗
-                        }
+                        if(userPos) walker.search(userPos, p.location, (status, res) => {
+                            if(status==='complete') {
+                                routeL = new AMap.Polyline({ path: res.routes[0].steps.flatMap(s => s.path), strokeColor: "#007AFF", strokeOpacity: 0.8, strokeWeight: 6, map: map });
+                                drawInfo(Math.round(res.routes[0].time/60)+" min", res.routes[0].distance+" m");
+                            } else drawInfo("?", "?");
+                        }); else drawInfo("?", "?");
                     });
                 });
             }
         });
     };
 
-    // 交互事件
     document.getElementById('lS').onchange = e => { curL = e.target.value; document.getElementById('curL').innerText = i18n[curL].n; search(); };
     document.getElementById('r').oninput = e => { rad = parseInt(e.target.value); document.getElementById('rv').innerText = (rad/1000).toFixed(1)+'km'; clearTimeout(timer); timer = setTimeout(search, 250); };
     document.getElementById('re').onclick = () => { if(geo) geo.getCurrentPosition((s, r) => { if(s==='complete') { userPos = r.position; updateUM(r.position); map.setZoomAndCenter(17, r.position); search(); } }); };
 
-    // 启动加载
-    window.onload = loadScript;
+    // 确保 DOM 加载完毕后初始化
+    window.onload = init;
 </script>
 <style>@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }</style>
 </body>
