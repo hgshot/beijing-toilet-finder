@@ -3,133 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BJ Toilet</title>
+    <title>Beijing Toilet Finder</title>
+
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#51A1B4">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BJ Toilet">
     <link rel="apple-touch-icon" href="icon.png">
-    
+
     <script type="text/javascript">
         window._AMapSecurityConfig = { securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3' };
     </script>
-    <script src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking"></script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking"></script>
     
     <style>
-        body,html{margin:0;padding:0;width:100%;height:100%;font-family:-apple-system,sans-serif;background:#fff;overflow:hidden}
-        #m{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;background:#fff;opacity:0;transition:opacity 0.4s}
-        .t{position:absolute;top:env(safe-area-inset-top,12px);left:50%;transform:translateX(-50%);width:90%;max-width:380px;background:#fff;padding:8px 16px;border-radius:30px;box-shadow:0 4px 15px rgba(0,0,0,0.1);z-index:9;display:flex;justify-content:space-between;align-items:center}
-        select{border:0;background:#f0f0f0;padding:6px 12px;border-radius:10px;font-size:12px;color:#51A1B4;outline:0}
-        .r{position:absolute;bottom:calc(env(safe-area-inset-bottom,20px)+10px);right:20px;width:54px;height:54px;background:#fff;border-radius:18px;box-shadow:0 4px 15px rgba(0,0,0,0.15);z-index:9;display:flex;align-items:center;justify-content:center;cursor:pointer}
-        /* 加载状态指示 */
-        #loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100;text-align:center;color:#51A1B4;font-size:14px;font-weight:bold}
-        .dots{display:inline-block;width:20px;height:20px;border:3px solid #f3f3f3;border-top:3px solid #51A1B4;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:10px}
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-        .pop{min-width:160px;padding:2px 0}
-        .pop h4{margin:0 0 4px;font-size:14px}
-        .pop b{color:#51A1B4;font-size:12px}
-        .pop a{display:block;margin-top:8px;padding:8px;background:#000;color:#fff;text-align:center;text-decoration:none;border-radius:8px;font-size:11px;font-weight:700}
-        .amap-copyright,.amap-mclogo{display:none!important}
-        @keyframes b{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+        :root { --p: #51A1B4; --g: rgba(255, 255, 255, 0.98); --s: 0 4px 16px rgba(0,0,0,0.15); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #fff; }
+        
+        /* 地图容器 */
+        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100%; z-index: 1; display: block; }
+
+        /* 顶部导航栏 */
+        .top-bar {
+            position: absolute; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%);
+            width: 88%; max-width: 380px; background: var(--g); padding: 8px 16px;
+            border-radius: 24px; box-shadow: var(--s); z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .lang-info { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+        select { border: none; background: #f0f0f0; padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
+
+        /* 右下角定位按钮 */
+        .bottom-hub { position: absolute; bottom: calc(env(safe-area-inset-bottom, 20px) + 10px); right: 20px; z-index: 100; }
+        .re-btn {
+            width: 54px; height: 54px; background: #fff; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--s); cursor: pointer;
+        }
+
+        /* 气泡弹窗样式 */
+        .pop { min-width: 170px; padding: 4px 0; }
+        .pop h4 { margin: 0 0 6px 0; font-size: 15px; }
+        .stats { font-size: 13px; color: var(--p); font-weight: 700; margin: 4px 0 8px; }
+        
+        /* 折叠菜单 */
+        details { border-top: 1px solid #eee; margin-top: 8px; }
+        summary { padding: 8px 0; cursor: pointer; font-size: 12px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+        .ext-btn { display: block; padding: 10px; border-radius: 8px; text-decoration: none; color: #fff; font-size: 12px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+        
+        .amap-copyright, .amap-mclogo { display: none !important; }
+        
+        /* 自定义 WC 水滴图标 */
+        .wc-marker { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer; }
+
+        /* 定位小人动画 */
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
     </style>
 </head>
 <body>
-    <div id="loading"><div class="dots"></div><br>Locating...</div>
-    <div class="t">
-        <span style="font-size:13px;font-weight:700">BJ Toilet Finder</span>
-        <select id="ls"><option value="en">English</option><option value="ko">한국어</option><option value="ja">日本語</option><option value="zh">中文</option></select>
+
+<div class="top-bar">
+    <div class="lang-info" id="curL">English</div>
+    <select id="lS">
+        <option value="en">Change Language</option>
+        <option value="ko">한국어</option>
+        <option value="ja">日本語</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+    </select>
+</div>
+
+<div class="bottom-hub">
+    <div class="re-btn" id="re">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="#007AFF"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
     </div>
-    <div class="r" id="re"><svg viewBox="0 0 24 24" width="26" height="26" fill="#51A1B4"><path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm8.9 3A8 8 0 0 0 13 3.1V1h-2v2.1A8 8 0 0 0 3.1 11H1v2h2.1A8 8 0 0 0 11 20.9V23h2v-2.1A8 8 0 0 0 20.9 13H23v-2h-2.1z"/></svg></div>
-    <div id="m"></div>
+</div>
+
+<div id="map"></div>
 
 <script>
-    const i18n={en:{g:"Navigate"},ko:{g:"네비게이션"},ja:{g:"ナビ"},zh:{g:"导航"}};
-    let cur='en', map, ps, geo, walker, uPos, uM, rL, tm;
+    const i18n = {
+        en:{n:"English",t:"Toilet",g:"Open App"}, ko:{n:"한국어",t:"화장실",g:"앱 열기"},
+        ja:{n:"日本語",t:"トイレ",g:"アプリ"}, es:{n:"Español",t:"Baño",g:"Abrir"}, fr:{n:"Français",t:"Toilettes",g:"Ouvrir"}
+    };
 
-    const ico = `<div style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"><svg width="34" height="42" viewBox="0 0 34 42" fill="none"><path d="M17 0C7.6 0 0 7.6 0 17C0 27.2 17 42 17 42C17 42 34 27.2 34 17C34 7.6 26.4 0 17 0Z" fill="#51A1B4"/><circle cx="17" cy="17" r="10" fill="#fff"/><text x="17" y="21" font-family="Arial" font-size="9" font-weight="900" fill="#51A1B4" text-anchor="middle">WC</text></svg></div>`;
+    let curL='en', map, ps, geo, walker, userPos=null, userM, routeL, timer;
 
-    function startApp() {
-        // 1. 初始化高德定位插件（独立于地图）
-        geo = new AMap.Geolocation({
-            enableHighAccuracy: true,
-            timeout: 8000,
-            zoomToAccuracy: true
+    // 自定义 WC 水滴图标 SVG 代码
+    const wcIconContent = `
+        <div class="wc-marker">
+            <svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17 0C7.61116 0 0 7.61116 0 17C0 27.2 17 42 17 42C17 42 34 27.2 34 17C34 7.61116 26.3888 0 17 0Z" fill="#51A1B4"/>
+                <circle cx="17" cy="17" r="11" fill="white"/>
+                <text x="17" y="21" font-family="Arial" font-size="9" font-weight="bold" fill="#51A1B4" text-anchor="middle">WC</text>
+            </svg>
+        </div>
+    `;
+
+    const initMap = () => {
+        try {
+            map = new AMap.Map('map', { 
+                zoom: 15, 
+                center: [116.397, 39.909], 
+                viewMode: '2D' 
+            });
+
+            map.on('complete', () => {
+                ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 40 });
+                walker = new AMap.Walking();
+                geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
+                
+                geo.getCurrentPosition((s, r) => {
+                    if(s==='complete') {
+                        userPos = r.position;
+                        updateUM(r.position);
+                        map.setZoomAndCenter(16, r.position);
+                    }
+                    search();
+                });
+            });
+
+            map.on('moveend', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
+        } catch (e) { console.error(e); }
+    };
+
+    // 更新用户小黄人标记
+    const updateUM = (pos) => {
+        const svgUser = `<svg viewBox="0 0 496 512" width="40" height="40" fill="#F4A000" stroke="white" stroke-width="15"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
+        if (userM) userM.setPosition(pos);
+        else userM = new AMap.Marker({ 
+            position: pos, 
+            content: `<div style="animation: bounce 2s infinite;">${svgUser}</div>`, 
+            offset: new AMap.Pixel(-20, -40), 
+            map: map 
         });
+    };
 
-        // 2. 先尝试获取位置
-        geo.getCurrentPosition((status, result) => {
-            // 无论定位成功还是失败，此时再初始化地图
-            let centerPos = (status === 'complete') ? result.position : [116.397, 39.909]; 
-            uPos = (status === 'complete') ? result.position : null;
-
-            initMap(centerPos);
-            
-            // 隐藏加载状态，显示地图
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('m').style.opacity = '1';
-        });
-    }
-
-    function initMap(center) {
-        map = new AMap.Map('m', {
-            zoom: 16,
-            center: center,
-            viewMode: '2D',
-            animateEnable: false
-        });
-
-        map.on('complete', () => {
-            ps = new AMap.PlaceSearch({type:'公共厕所', pageSize:40});
-            walker = new AMap.Walking();
-            if(uPos) setUM(uPos);
-            search();
-            
-            // 开启位置持续监听
-            geo.watchPosition();
-            AMap.event.addListener(geo, 'complete', d => { uPos = d.position; setUM(d.position); });
-        });
-        
-        map.on('moveend', () => { clearTimeout(tm); tm = setTimeout(search, 300); });
-    }
-
-    function setUM(p) {
-        const svg = `<svg viewBox="0 0 496 512" width="36" height="36" fill="#F4A000" stroke="#fff" stroke-width="15"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
-        if (uM) uM.setPosition(p);
-        else uM = new AMap.Marker({position:p, content:`<div style="animation:b 2s infinite">${svg}</div>`, offset:new AMap.Pixel(-18,-30), map:map});
-    }
-
-    function search() {
+    // 搜索厕所并打点
+    const search = () => {
         if(!ps || !map) return;
         ps.searchNearBy('', map.getCenter(), 1500, (s, r) => {
-            map.getAllOverlays('marker').forEach(x => { if(x!==uM) map.remove(x); });
-            if(s==='complete' && r.poiList){
+            map.getAllOverlays('marker').forEach(m => { if(m !== userM) map.remove(m); });
+            if(s==='complete' && r.poiList) {
                 r.poiList.pois.forEach(p => {
-                    const mk = new AMap.Marker({position:p.location, content:ico, offset:new AMap.Pixel(-17,-42), map:map});
-                    mk.on('click', () => {
-                        if(rL) map.remove(rL);
-                        if(uPos) walker.search(uPos, p.location, (st, res) => {
-                            let d="...", t="...";
-                            if(st==='complete'){
-                                rL = new AMap.Polyline({path:res.routes[0].steps.flatMap(x=>x.path), strokeColor:"#51A1B4", strokeWeight:6, map:map});
-                                d = res.routes[0].distance + "m";
-                                t = Math.round(res.routes[0].time/60) + "min";
+                    const m = new AMap.Marker({
+                        position: p.location,
+                        content: wcIconContent,
+                        offset: new AMap.Pixel(-17, -42),
+                        map: map
+                    });
+                    m.on('click', () => {
+                        if(routeL) map.remove(routeL);
+                        if(userPos) walker.search(userPos, p.location, (status, res) => {
+                            let t="...", d="...";
+                            if(status==='complete') {
+                                routeL = new AMap.Polyline({ 
+                                    path: res.routes[0].steps.flatMap(s => s.path), 
+                                    strokeColor: "#007AFF", 
+                                    strokeOpacity: 0.8, 
+                                    strokeWeight: 6, 
+                                    map: map 
+                                });
+                                t = Math.round(res.routes[0].time/60) + " min";
+                                d = res.routes[0].distance + " m";
                             }
-                            new AMap.InfoWindow({
-                                content:`<div class="pop"><h4>${p.name}</h4><b>${t} • ${d}</b><a href="http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w">${i18n[cur].g}</a></div>`,
-                                offset:new AMap.Pixel(0,-35)
-                            }).open(map, p.location);
+                            const content = `
+                                <div class="pop">
+                                    <h4>${p.name}</h4>
+                                    <div class="stats">${t} • ${d}</div>
+                                    <details>
+                                        <summary>${i18n[curL].g} ▾</summary>
+                                        <a href="http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w" class="ext-btn" style="background:#000">Apple Maps</a>
+                                        <a href="https://www.google.com/maps/dir/?api=1&destination=${p.location.lat},${p.location.lng}&travelmode=walking" class="ext-btn" style="background:#34A853">Google Maps</a>
+                                    </details>
+                                </div>`;
+                            new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -35) }).open(map, p.location);
                         });
                     });
                 });
             }
         });
-    }
+    };
 
-    document.getElementById('ls').onchange = e => { cur = e.target.value; search(); };
-    document.getElementById('re').onclick = () => { if(geo) geo.getCurrentPosition((s,r)=>{if(s==='complete'){map.setCenter(r.position); search();}}); };
-    
-    // 启动流程
-    window.onload = startApp;
+    document.getElementById('lS').onchange = e => { curL = e.target.value; document.getElementById('curL').innerText = i18n[curL].n; search(); };
+    document.getElementById('re').onclick = () => { if(geo) geo.getCurrentPosition((s, r) => { if(s==='complete') { map.setZoomAndCenter(17, r.position); search(); } }); };
+
+    window.onload = initMap;
 </script>
 </body>
 </html>
