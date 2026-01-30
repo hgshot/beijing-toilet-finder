@@ -4,67 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Beijing Finder Pro</title>
-    
     <script type="text/javascript">
-        window._AMapSecurityConfig = {
-            securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3'
-        }
+        window._AMapSecurityConfig = { securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3' };
     </script>
-
     <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking"></script>
-
+    
     <style>
-        :root { --p: #007AFF; --g: rgba(255, 255, 255, 0.96); --s: 0 4px 16px rgba(0,0,0,0.15); }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #f2f2f7; }
+        :root { --p: #007AFF; --g: rgba(255, 255, 255, 0.98); --s: 0 4px 16px rgba(0,0,0,0.15); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #fff; }
         
-        /* 错误提示框 (仅出错时显示) */
-        #error-box {
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; background: rgba(0,0,0,0.8); color: #ff6b6b; padding: 20px;
-            border-radius: 12px; z-index: 999; text-align: center; font-size: 14px; line-height: 1.5;
+        /* 核心修复：强制地图容器可见性 */
+        #map { 
+            position: absolute; top: 0; bottom: 0; left: 0; right: 0; 
+            width: 100%; height: 100%; z-index: 1; display: block;
         }
 
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #e0e0e0; }
-        
-        /* 顶部栏 */
+        /* 顶部栏：增加 Z-index 确保在地图上层 */
         .top-bar {
             position: absolute; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%);
             width: 88%; max-width: 380px; background: var(--g); padding: 8px 16px;
-            border-radius: 24px; box-shadow: var(--s); z-index: 10;
-            display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(15px);
+            border-radius: 24px; box-shadow: var(--s); z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        select { border: none; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
+        .lang-info { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+        select { border: none; background: #f0f0f0; padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
 
         /* 底部 Hub */
         .bottom-hub {
             position: absolute; bottom: calc(env(safe-area-inset-bottom, 20px) + 10px);
             left: 50%; transform: translateX(-50%); width: 92%; max-width: 400px;
-            display: flex; align-items: center; gap: 12px; z-index: 10;
+            display: flex; align-items: center; gap: 12px; z-index: 100;
         }
-        .slider-card { flex: 1; background: var(--g); padding: 14px 18px; border-radius: 20px; box-shadow: var(--s); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(15px); }
-        input[type=range] { flex: 1; accent-color: var(--p); cursor: pointer; }
+        .slider-card {
+            flex: 1; background: var(--g); padding: 14px 18px; border-radius: 20px;
+            box-shadow: var(--s); display: flex; align-items: center; gap: 12px;
+        }
+        input[type=range] { flex: 1; accent-color: var(--p); height: 4px; cursor: pointer; }
         .v { font-size: 13px; font-weight: 800; color: var(--p); min-width: 44px; text-align: right; }
-        .re-btn { width: 54px; height: 54px; background: #fff; border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: var(--s); cursor: pointer; flex-shrink: 0; }
 
-        /* 弹窗与加载 */
+        .re-btn {
+            width: 54px; height: 54px; background: #fff; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--s); cursor: pointer; flex-shrink: 0;
+        }
+
+        /* 弹窗与图标 */
         .pop { min-width: 170px; padding: 4px 0; }
         .stats { font-size: 13px; color: #007AFF; font-weight: 700; margin: 4px 0 8px; }
-        details { border-top: 1px solid #eee; margin-top: 8px; }
-        summary { padding: 8px 0; cursor: pointer; font-size: 12px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
         .ext-btn { display: block; padding: 10px; border-radius: 8px; text-decoration: none; color: #fff; font-size: 12px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+        
+        /* 隐藏高德UI组件 */
         .amap-copyright, .amap-mclogo { display: none !important; }
-        .loader { position: fixed; top: 45%; left: 50%; transform: translateX(-50%); z-index: 5; text-align: center; color: #666; font-size: 12px; font-weight: 500; }
-        .spinner { width: 24px; height: 24px; border: 3px solid #ddd; border-top-color: var(--p); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 8px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* 图标 bounce 动画 */
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
     </style>
 </head>
 <body>
 
-<div id="error-box"></div>
-<div class="loader" id="ld"><div class="spinner"></div>Loading Map...</div>
-
 <div class="top-bar">
-    <div id="curL">English</div>
+    <div class="lang-info" id="curL">English</div>
     <select id="lS">
         <option value="en">Change Language</option>
         <option value="ko">한국어</option>
@@ -92,73 +91,45 @@
 
     let curL='en', map, ps, geo, walker, rad=1000, userPos=null, userM, routeL, timer;
 
-    // 屏幕错误报告
-    function reportError(msg) {
-        document.getElementById('ld').style.display = 'none';
-        const box = document.getElementById('error-box');
-        box.style.display = 'block';
-        box.innerHTML = `⚠️ <strong>Map Load Error</strong><br>${msg}<br><br><small>请按 F12 查看 Console 详细报错</small>`;
-    }
-
-    function init() {
-        // 检查 API 是否加载
-        if (typeof AMap === 'undefined') {
-            reportError("Network Blocked: AMap JS not loaded.");
-            return;
-        }
-
+    // 核心初始化逻辑
+    const initMap = () => {
         try {
-            map = new AMap.Map('map', { 
-                zoom: 15, 
+            map = new AMap.Map('map', {
+                zoom: 15,
                 center: [116.397, 39.909],
-                viewMode: '2D', // 强制2D，兼容性最好
-                resizeEnable: true
-            });
-            
-            // 监听地图加载错误
-            map.on('error', function(e) {
-                console.error("AMap Error:", e);
-                alert("Map Error: " + JSON.stringify(e));
+                viewMode: '2D', // 强制2D模式提高兼容性
+                expandZoomRange: true
             });
 
             map.on('complete', () => {
-                document.getElementById('ld').style.display = 'none';
+                ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 35 });
+                walker = new AMap.Walking();
+                geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
                 
-                AMap.plugin(['AMap.PlaceSearch','AMap.Geolocation','AMap.Walking'], function(){
-                    ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 35 });
-                    walker = new AMap.Walking();
-                    geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
-                    
-                    geo.getCurrentPosition((s, r) => {
-                        if(s==='complete') { 
-                            userPos = r.position; 
-                            updateUM(r.position); 
-                            map.panTo(r.position);
-                        }
-                    });
-                    geo.watchPosition();
-                    AMap.event.addListener(geo, 'complete', d => { userPos = d.position; updateUM(d.position); });
+                // 定位并搜索
+                geo.getCurrentPosition((s, r) => {
+                    if(s==='complete') {
+                        userPos = r.position;
+                        updateUM(r.position);
+                        map.setZoomAndCenter(16, r.position);
+                    }
+                    search();
                 });
-                
-                search();
             });
-        } catch(err) {
-            reportError(err.message);
-        }
 
-        map.on('moveend', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
-    }
+            map.on('moveend', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
+        } catch (e) { console.error("Map init error:", e); }
+    };
 
-    // 更新小人
+    // 用户标记
     const updateUM = (pos) => {
         const svg = `<svg viewBox="0 0 496 512" width="40" height="40" fill="#F4A000" stroke="white" stroke-width="15"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
         if (userM) userM.setPosition(pos);
         else userM = new AMap.Marker({ position: pos, content: `<div style="animation: bounce 2s infinite;">${svg}</div>`, offset: new AMap.Pixel(-20, -40), map: map });
     };
 
-    // 搜索
     const search = () => {
-        if(!ps) return;
+        if(!ps || !map) return;
         ps.searchNearBy('', map.getCenter(), rad, (s, r) => {
             map.getAllOverlays('marker').forEach(m => { if(m !== userM) map.remove(m); });
             if(s==='complete' && r.poiList) {
@@ -170,16 +141,16 @@
                     });
                     m.on('click', () => {
                         if(routeL) map.remove(routeL);
-                        const drawInfo = (t, d) => {
-                            const content = `<div class="pop"><h4>${p.name}</h4><div class="stats">${t} • ${d}</div><details><summary>${i18n[curL].g}</summary><a href="http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w" class="ext-btn" style="background:#000">Apple Maps</a><a href="https://www.google.com/maps/dir/?api=1&destination=${p.location.lat},${p.location.lng}&travelmode=walking" class="ext-btn" style="background:#34A853">Google Maps</a></details></div>`;
-                            new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -25) }).open(map, p.location);
-                        };
                         if(userPos) walker.search(userPos, p.location, (status, res) => {
+                            let t="...", d="...";
                             if(status==='complete') {
                                 routeL = new AMap.Polyline({ path: res.routes[0].steps.flatMap(s => s.path), strokeColor: "#007AFF", strokeOpacity: 0.8, strokeWeight: 6, map: map });
-                                drawInfo(Math.round(res.routes[0].time/60)+" min", res.routes[0].distance+" m");
-                            } else drawInfo("?", "?");
-                        }); else drawInfo("?", "?");
+                                t = Math.round(res.routes[0].time/60) + " min";
+                                d = res.routes[0].distance + " m";
+                            }
+                            const content = `<div class="pop"><h4>${p.name}</h4><div class="stats">${t} • ${d}</div><details><summary>${i18n[curL].g}</summary><a href="http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w" class="ext-btn" style="background:#000">Apple Maps</a><a href="https://www.google.com/maps/dir/?api=1&destination=${p.location.lat},${p.location.lng}&travelmode=walking" class="ext-btn" style="background:#34A853">Google Maps</a></details></div>`;
+                            new AMap.InfoWindow({ content, offset: new AMap.Pixel(0, -25) }).open(map, p.location);
+                        });
                     });
                 });
             }
@@ -188,11 +159,9 @@
 
     document.getElementById('lS').onchange = e => { curL = e.target.value; document.getElementById('curL').innerText = i18n[curL].n; search(); };
     document.getElementById('r').oninput = e => { rad = parseInt(e.target.value); document.getElementById('rv').innerText = (rad/1000).toFixed(1)+'km'; clearTimeout(timer); timer = setTimeout(search, 250); };
-    document.getElementById('re').onclick = () => { if(geo) geo.getCurrentPosition((s, r) => { if(s==='complete') { userPos = r.position; updateUM(r.position); map.setZoomAndCenter(17, r.position); search(); } }); };
+    document.getElementById('re').onclick = () => { if(geo) geo.getCurrentPosition((s, r) => { if(s==='complete') { map.setZoomAndCenter(17, r.position); search(); } }); };
 
-    // 确保 DOM 加载完毕后初始化
-    window.onload = init;
+    window.onload = initMap;
 </script>
-<style>@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }</style>
 </body>
 </html>
