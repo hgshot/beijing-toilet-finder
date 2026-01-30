@@ -18,46 +18,60 @@
     <script src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4"></script>
     
     <style>
-        body,html{margin:0;padding:0;width:100%;height:100%;font-family:-apple-system,sans-serif;background:#fff;overflow:hidden}
+        /* 强制全屏，防止 iOS 橡皮筋效果 */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #f5f5f5; }
         
-        #m{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;background:#f2f2f2;opacity:0;transition:opacity 0.5s}
+        /* 地图容器：移除所有透明度动画，确保物理可见 */
+        #m { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
         
-        /* 顶部栏 */
-        .t{position:absolute;top:env(safe-area-inset-top,12px);left:50%;transform:translateX(-50%);width:90%;max-width:380px;background:#fff;padding:8px 16px;border-radius:30px;box-shadow:0 4px 15px rgba(0,0,0,0.1);z-index:9;display:flex;justify-content:space-between;align-items:center}
-        select{border:0;background:#f0f0f0;padding:6px 12px;border-radius:10px;font-size:12px;color:#51A1B4;outline:0}
-        
-        /* 底部按钮通用样式 */
-        .btn-hub {
-            position:absolute; 
-            bottom:calc(env(safe-area-inset-bottom,20px)+10px);
-            width:54px; height:54px; 
-            background:#fff; border-radius:18px; 
-            box-shadow:0 4px 15px rgba(0,0,0,0.15);
-            /* 关键：z-index > 99，确保在 Loading 遮罩层之上 */
-            z-index:101; 
-            display:flex; align-items:center; justify-content:center; cursor:pointer;
+        /* Loading 遮罩：层级 10，定位完成后隐藏 */
+        #ld { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #fff; z-index: 10; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.3s; /* 仅让遮罩淡出，不碰地图 */
         }
-        /* 左侧刷新按钮 */
+        .sp { width: 24px; height: 24px; border: 3px solid #eee; border-top: 3px solid #51A1B4; border-radius: 50%; animation: s 1s linear infinite; margin-bottom: 10px; }
+        .txt { font-size: 14px; color: #51A1B4; font-weight: 600; }
+        @keyframes s { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
+
+        /* 顶部栏 */
+        .t { 
+            position: fixed; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%); 
+            width: 90%; max-width: 380px; background: #fff; padding: 8px 16px; 
+            border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            z-index: 100; display: flex; justify-content: space-between; align-items: center; 
+        }
+        select { border: 0; background: #f0f0f0; padding: 6px 12px; border-radius: 10px; font-size: 12px; color: #51A1B4; outline: 0; }
+        
+        /* 底部按钮通用样式：使用 FIXED 定位，死死钉在底部 */
+        .btn-hub {
+            position: fixed; 
+            bottom: calc(env(safe-area-inset-bottom, 20px) + 20px); /* 适配 iPhone 底部黑条 */
+            width: 50px; height: 50px; 
+            background: #fff; border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 100; /* 保证在所有图层最上方 */
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        
+        /* 左下角：刷新 */
         .btn-l { left: 20px; }
-        /* 右侧定位按钮 */
+        
+        /* 右下角：定位 */
         .btn-r { right: 20px; }
         
-        /* Loading 遮罩 (z-index: 99) */
-        #ld{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:99;display:flex;flex-direction:column;justify-content:center;align-items:center}
-        .sp{width:24px;height:24px;border:3px solid #eee;border-top:3px solid #51A1B4;border-radius:50%;animation:s 1s linear infinite;margin-bottom:10px}
-        .txt{font-size:14px;color:#51A1B4;font-weight:600}
-        @keyframes s{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-
-        .pop{min-width:160px;padding:2px 0}
-        .pop h4{margin:0 0 4px;font-size:14px}
-        .pop b{color:#51A1B4;font-size:12px}
-        .pop a{display:block;margin-top:8px;padding:8px;background:#000;color:#fff;text-align:center;text-decoration:none;border-radius:8px;font-size:11px;font-weight:700}
-        .amap-copyright,.amap-mclogo{display:none!important}
-        @keyframes b{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+        /* 弹窗样式 */
+        .pop { min-width: 160px; padding: 2px 0; }
+        .pop h4 { margin: 0 0 4px; font-size: 14px; }
+        .pop b { color: #51A1B4; font-size: 12px; }
+        .pop a { display: block; margin-top: 8px; padding: 8px; background: #000; color: #fff; text-align: center; text-decoration: none; border-radius: 8px; font-size: 11px; font-weight: 700; }
+        .amap-copyright, .amap-mclogo { display: none !important; }
+        @keyframes b { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }
     </style>
 </head>
 <body>
-    <div id="ld"><div class="sp"></div><div class="txt">Locating...</div></div>
+    <div id="ld"><div class="sp"></div><div class="txt">Initializing...</div></div>
     
     <div class="t">
         <span style="font-size:13px;font-weight:700">BJ Toilet Finder</span>
@@ -65,11 +79,11 @@
     </div>
 
     <div class="btn-hub btn-l" onclick="window.location.reload()">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="#51A1B4"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-8 3.58-8 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="#FF3B30"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-8 3.58-8 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
     </div>
 
     <div class="btn-hub btn-r" id="re">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="#51A1B4"><path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm8.9 3A8 8 0 0 0 13 3.1V1h-2v2.1A8 8 0 0 0 3.1 11H1v2h2.1A8 8 0 0 0 11 20.9V23h2v-2.1A8 8 0 0 0 20.9 13H23v-2h-2.1z"/></svg>
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="#007AFF"><path d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm8.9 3A8 8 0 0 0 13 3.1V1h-2v2.1A8 8 0 0 0 3.1 11H1v2h2.1A8 8 0 0 0 11 20.9V23h2v-2.1A8 8 0 0 0 20.9 13H23v-2h-2.1z"/></svg>
     </div>
 
     <div id="m"></div>
@@ -77,68 +91,66 @@
 <script>
     const i18n={en:{g:"Navigate"},ko:{g:"네비게이션"},ja:{g:"ナビ"},zh:{g:"导航"}};
     let cur='en', map, ps, geo, walker, uPos, uM, rL, tm;
-    let isMapInit = false;
 
+    // WC 图标
     const ico = `<div style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"><svg width="34" height="42" viewBox="0 0 34 42" fill="none"><path d="M17 0C7.6 0 0 7.6 0 17C0 27.2 17 42 17 42C17 42 34 27.2 34 17C34 7.6 26.4 0 17 0Z" fill="#51A1B4"/><circle cx="17" cy="17" r="10" fill="#fff"/><text x="17" y="21" font-family="Arial" font-size="9" font-weight="900" fill="#51A1B4" text-anchor="middle">WC</text></svg></div>`;
 
-    function start() {
+    // 1. 立即启动：不等待定位，直接渲染地图，防止白屏
+    window.onload = function() {
         // 显式加载插件
         AMap.plugin(['AMap.PlaceSearch', 'AMap.Geolocation', 'AMap.Walking'], function() {
-            geo = new AMap.Geolocation({
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0
+            
+            // 初始化地图 (默认北京，确保底图先出来)
+            map = new AMap.Map('m', {
+                zoom: 15,
+                center: [116.397, 39.909],
+                resizeEnable: true // 关键：允许动态调整大小
             });
 
-            // 超时熔断：5.5秒无果则强行初始化
-            setTimeout(() => {
-                if (!isMapInit) {
-                    console.log("Timeout, init default.");
-                    initMap([116.397, 39.909]);
-                }
-            }, 5500);
-
-            // 尝试获取位置
-            geo.getCurrentPosition((status, result) => {
-                if (isMapInit) return;
-                let center = [116.397, 39.909];
-                if (status === 'complete') {
-                    center = result.position;
-                    uPos = result.position;
-                }
-                initMap(center);
+            // 地图加载成功后
+            map.on('complete', () => {
+                // 隐藏 Loading
+                document.getElementById('ld').style.opacity = '0';
+                setTimeout(() => { document.getElementById('ld').style.display = 'none'; }, 300);
+                
+                // 初始化服务
+                ps = new AMap.PlaceSearch({type:'公共厕所', pageSize:40});
+                walker = new AMap.Walking();
+                
+                // 此时再开始定位
+                startLocate();
             });
+
+            map.on('moveend', () => { clearTimeout(tm); tm = setTimeout(search, 300); });
         });
+    };
+
+    function startLocate() {
+        geo = new AMap.Geolocation({
+            enableHighAccuracy: true,
+            timeout: 6000,
+            showButton: false // 不使用高德自带的按钮，用我们自己的
+        });
+        
+        // 第一次自动定位
+        geo.getCurrentPosition((status, result) => {
+            if (status === 'complete') {
+                uPos = result.position;
+                setUM(uPos);
+                map.setCenter(uPos); // 只有定位成功才移动视角
+                search();
+            } else {
+                // 定位失败也搜一次（显示默认北京的）
+                search();
+            }
+        });
+
+        // 持续监听
+        geo.watchPosition();
+        AMap.event.addListener(geo, 'complete', d => { uPos = d.position; setUM(d.position); });
     }
 
-    function initMap(center) {
-        isMapInit = true;
-        map = new AMap.Map('m', {
-            zoom: 16, center: center, viewMode: '2D', animateEnable: false
-        });
-
-        map.on('complete', () => {
-            document.getElementById('ld').style.display = 'none';
-            document.getElementById('m').style.opacity = '1';
-            
-            ps = new AMap.PlaceSearch({type:'公共厕所', pageSize:40});
-            walker = new AMap.Walking();
-
-            if(uPos) { setUM(uPos); search(); }
-            
-            geo.watchPosition();
-            AMap.event.addListener(geo, 'complete', d => { uPos = d.position; setUM(d.position); });
-        });
-
-        map.on('moveend', () => { clearTimeout(tm); tm = setTimeout(search, 300); });
-    }
-
-    function setUM(p) {
-        const svg = `<svg viewBox="0 0 496 512" width="36" height="36" fill="#F4A000" stroke="#fff" stroke-width="15"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
-        if (uM) uM.setPosition(p);
-        else uM = new AMap.Marker({position:p, content:`<div style="animation:b 2s infinite">${svg}</div>`, offset:new AMap.Pixel(-18,-30), map:map});
-    }
-
+    // 搜索逻辑
     function search() {
         if(!ps || !map) return;
         ps.searchNearBy('', map.getCenter(), 1500, (s, r) => {
@@ -166,10 +178,15 @@
         });
     }
 
+    // 用户小黄人
+    function setUM(p) {
+        const svg = `<svg viewBox="0 0 496 512" width="36" height="36" fill="#F4A000" stroke="#fff" stroke-width="15"><path d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96c48.6 0 88 39.4 88 88s-39.4 88-88 88-88-39.4-88-88 39.4-88 88-88zm0 344c-58.7 0-111.3-26.6-146.5-68.2 18.8-35.4 55.6-59.8 98.5-59.8 2.4 0 4.8.4 7.1 1.1 13 4.2 26.6 6.9 40.9 6.9 14.3 0 28-2.7 40.9-6.9 2.3-.7 4.7-1.1 7.1-1.1 42.9 0 79.7 24.4 98.5 59.8C359.3 421.4 306.7 448 248 448z"/></svg>`;
+        if (uM) uM.setPosition(p);
+        else uM = new AMap.Marker({position:p, content:`<div style="animation:b 2s infinite">${svg}</div>`, offset:new AMap.Pixel(-18,-30), map:map});
+    }
+
     document.getElementById('ls').onchange = e => { cur = e.target.value; search(); };
     document.getElementById('re').onclick = () => { if(geo) geo.getCurrentPosition((s,r)=>{if(s==='complete'){map.setCenter(r.position); search();}}); };
-    
-    window.onload = start;
 </script>
 </body>
 </html>
