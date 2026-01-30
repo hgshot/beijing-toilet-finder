@@ -1,25 +1,23 @@
 {
-  "name": "Beijing Toilet Finder",
-  "short_name": "Toilet Finder",
-  "description": "附近公厕地图 - 查找周边卫生间，支持步行导航",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "theme_color": "#51A1B4",
-  "background_color": "#ffffff",
-  "lang": "zh-CN",
+  "short_name": "BJ Toilet",
+  "name": "Beijing Public Toilet Finder",
+  "description": "Find public toilets in Beijing with real-time navigation and walking routes.",
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
+      "src": "icon-512.png",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
-      "sizes": "512x512",
+      "src": "icon-192.png",
       "type": "image/png",
-      "purpose": "any maskable"
+      "sizes": "192x192"
     }
-  ]
+  ],
+  "start_url": "index.html",
+  "background_color": "#FFFFFF",
+  "display": "standalone",
+  "scope": "./",
+  "theme_color": "#51A1B4"
 }
