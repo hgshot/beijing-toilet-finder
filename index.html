@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Beijing Finder Pro</title>
+    <script>
+        window._AMapSecurityConfig = { securityJsCode: '5ffadc3176970e5963d9961ada9fc1e3' };
+    </script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation"></script>
+    <style>
+        :root { --p: #007AFF; --g: rgba(255, 255, 255, 0.96); --s: 0 4px 20px rgba(0,0,0,0.15); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #f2f2f7; }
+        
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; opacity: 0; transition: opacity 0.5s ease; }
+        #map.loaded { opacity: 1; }
+
+        /* 加载动画 */
+        .loader {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 0; display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .spinner {
+            width: 30px; height: 30px; border: 3px solid #ddd; border-top-color: var(--p);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        .load-txt { font-size: 12px; color: #999; font-weight: 500; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 顶部栏 */
+        .top-bar {
+            position: absolute; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%);
+            width: 88%; max-width: 380px; background: var(--g); padding: 8px 16px;
+            border-radius: 24px; box-shadow: var(--s); z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+        }
+        .lang-info { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+        select { border: none; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 14px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; -webkit-appearance: none; }
+
+        /* 底部 Hub */
+        .bottom-hub {
+            position: absolute; bottom: calc(env(safe-area-inset-bottom, 20px) + 10px);
+            left: 50%; transform: translateX(-50%); width: 92%; max-width: 400px;
+            display: flex; align-items: center; gap: 12px; z-index: 10;
+        }
+        .slider-card {
+            flex: 1; background: var(--g); padding: 14px 18px; border-radius: 20px;
+            box-shadow: var(--s); display: flex; align-items: center; gap: 12px;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+        }
+        input[type=range] { flex: 1; accent-color: var(--p); height: 4px; cursor: pointer; }
+        .v { font-size: 13px; font-weight: 800; color: var(--p); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
+        .re-btn {
+            width: 54px; height: 54px; background: #fff; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--s); cursor: pointer; flex-shrink: 0;
+        }
+
+        /* Pop Info */
+        .pop { padding: 4px; }
+        .btn { 
+            display: block; padding: 10px; border-radius: 10px; text-decoration: none; 
+            color: #fff; font-size: 13px; font-weight: 600; text-align: center; margin-top: 8px; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .amap-copyright, .amap-mclogo { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+    <div class="spinner"></div>
+    <div class="load-txt">Loading Map...</div>
+</div>
+
+<div class="top-bar">
+    <div class="lang-info" id="curLangTxt">English</div>
+    <select id="langSelect">
+        <option value="en" selected>More / Change</option>
+        <option value="ko">한국어</option>
+        <option value="ja">日本語</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+    </select>
+</div>
+
+<div class="bottom-hub">
+    <div class="slider-card">
+        <input type="range" id="r" min="500" max="2500" step="500" value="1000">
+        <span class="v" id="rv">1.0km</span>
+    </div>
+    <div class="re-btn" id="re">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="var(--p)"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+    const i18n = {
+        en:{n:"English",t:"Public Toilet",g:"Open"}, ko:{n:"한국어",t:"공중화장실",g:"열기"},
+        ja:{n:"日本語",t:"公衆便所",g:"開く"}, es:{n:"Español",t:"Baño Público",g:"Abrir"}, fr:{n:"Français",t:"Toilettes",g:"Ouvrir"}
+    };
+    let curL='en', map, ps, geo, timer, rad=1000;
+
+    const init = () => {
+        try {
+            map = new AMap.Map('map', { zoom: 15, center: [116.397, 39.909], viewMode: '2D' });
+            
+            map.on('complete', () => {
+                // 地图加载成功，显示地图，隐藏 Loading
+                document.getElementById('map').classList.add('loaded');
+                document.getElementById('loader').style.display = 'none';
+                
+                AMap.plugin(['AMap.PlaceSearch','AMap.Geolocation'], () => {
+                    ps = new AMap.PlaceSearch({ type: '公共厕所', pageSize: 35 });
+                    geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
+                    // 尝试定位，失败则默认在北京
+                    geo.getCurrentPosition((s, r) => { 
+                        if(s==='complete') { map.setZoomAndCenter(16, r.position); }
+                        search(); 
+                    });
+                });
+            });
+        } catch(e) {
+            document.querySelector('.load-txt').innerText = "Load Failed. Check Network.";
+        }
+
+        map.on('moveend', () => { clearTimeout(timer); timer = setTimeout(search, 300); });
+    };
+
+    const search = () => {
+        if(!ps) return;
+        ps.searchNearBy('', map.getCenter(), rad, (s, r) => {
+            map.clearMap();
+            if(s==='complete' && r.poiList) {
+                r.poiList.pois.forEach(p => {
+                    const m = new AMap.Marker({ position: p.location, map: map });
+                    m.on('click', () => {
+                        // 使用官方标准 URL 唤起导航
+                        const appleUrl = `http://maps.apple.com/?daddr=${p.location.lat},${p.location.lng}&dirflg=w`;
+                        const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.location.lat},${p.location.lng}&travelmode=walking`;
+                        
+                        new AMap.InfoWindow({
+                            content: `<div class="pop"><b>${i18n[curL].t}</b>
+                                <a href="${appleUrl}" class="btn" style="background:#000">${i18n[curL].g} Apple Maps</a>
+                                <a href="${googleUrl}" class="btn" style="background:#34A853">${i18n[curL].g} Google Maps</a>
+                            </div>`,
+                            offset: new AMap.Pixel(0, -32)
+                        }).open(map, p.location);
+                    });
+                });
+            }
+        });
+    };
+
+    document.getElementById('langSelect').onchange = (e) => {
+        curL = e.target.value;
+        document.getElementById('curLangTxt').innerText = i18n[curL].n;
+        search();
+    };
+
+    document.getElementById('r').oninput = (e) => {
+        rad = parseInt(e.target.value);
+        document.getElementById('rv').innerText = (rad/1000).toFixed(1)+'km';
+        clearTimeout(timer); timer = setTimeout(search, 250);
+    };
+
+    document.getElementById('re').onclick = () => {
+        if(geo) geo.getCurrentPosition((s, r) => {
+            if(s==='complete') { map.setZoomAndCenter(17, r.position); search(); }
+        });
+    };
+
+    window.onload = init;
+</script>
+</body>
+</html>
