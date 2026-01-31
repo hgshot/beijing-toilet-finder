@@ -18,10 +18,10 @@
     <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking"></script>
     
     <style>
-        /* 核心视觉调整：--g 改为 0.9 透明度 */
+        /* 全局变量 */
         :root { 
             --p: #51A1B4; 
-            --g: rgba(255, 255, 255, 0.90); /* 背景透明度调整 */
+            --g: rgba(255, 255, 255, 0.90); 
             --s: 0 4px 16px rgba(0,0,0,0.12); 
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #fff; }
@@ -29,43 +29,48 @@
         /* 强制地图容器物理尺寸 */
         #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100% !important; height: 100% !important; z-index: 1; display: block; }
 
-        /* 顶部栏：增加磨砂玻璃效果 */
+        /* 顶部栏 */
         .top-bar {
             position: absolute; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%);
             width: 88%; max-width: 380px; 
-            background: var(--g); /* 使用半透明背景 */
-            backdrop-filter: blur(10px); /* 关键：磨砂模糊 */
-            -webkit-backdrop-filter: blur(10px); /* 兼容 iOS */
-            padding: 8px 16px;
-            border-radius: 24px; box-shadow: var(--s); z-index: 100;
+            background: var(--g); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            padding: 8px 16px; border-radius: 24px; box-shadow: var(--s); z-index: 100;
             display: flex; justify-content: space-between; align-items: center;
         }
         .lang-info { font-size: 13px; font-weight: 700; color: #1d1d1f; }
         select { border: none; background: rgba(240, 240, 240, 0.8); padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
 
-        /* 底部操作按钮：同步增加透明度和磨砂 */
+        /* 底部操作按钮 */
         .btn-ui {
             position: absolute; bottom: calc(env(safe-area-inset-bottom, 20px) + 10px);
             width: 54px; height: 54px; 
-            background: var(--g); /* 统一半透明背景 */
-            backdrop-filter: blur(10px); /* 磨砂 */
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 18px;
-            display: flex; align-items: center; justify-content: center;
+            background: var(--g); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-radius: 18px; display: flex; align-items: center; justify-content: center;
             box-shadow: var(--s); z-index: 100; cursor: pointer;
         }
         .btn-refresh { left: 20px; }
         .btn-re { right: 20px; }
 
-        /* 引导气泡样式 */
+        /* 修改重点：大号半透明引导气泡 */
         .install-toast {
-            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.75); color: #fff; padding: 10px 20px;
-            border-radius: 30px; font-size: 13px; font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 200;
+            position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+            
+            /* 尺寸调整：宽度增加至屏幕75%，高度通过 padding 撑大 */
+            width: 75%; max-width: 400px;
+            padding: 25px 20px; 
+            
+            /* 视觉调整：更透明 + 强磨砂 */
+            background: rgba(0, 0, 0, 0.55); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            
+            /* 文字居中 */
+            display: flex; justify-content: center; align-items: center;
+            color: #fff; text-align: center;
+            
+            border-radius: 50px; 
+            font-size: 15px; font-weight: 600;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25); z-index: 200;
             opacity: 0; pointer-events: none; transition: opacity 0.6s ease;
-            white-space: nowrap; backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
         }
         .install-toast.show { opacity: 1; }
 
