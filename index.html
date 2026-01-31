@@ -18,10 +18,11 @@
     <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=27cb9ef31045cd08c4eae5263589ccc4&plugin=AMap.PlaceSearch,AMap.Geolocation,AMap.Walking"></script>
     
     <style>
-        /* 全局变量 */
+        /* 全局变量调整 */
         :root { 
             --p: #51A1B4; 
-            --g: rgba(255, 255, 255, 0.90); 
+            /* 关键修改：透明度从 0.9 降至 0.6，大幅增强透光感 */
+            --g: rgba(255, 255, 255, 0.60); 
             --s: 0 4px 16px rgba(0,0,0,0.12); 
         }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #fff; }
@@ -33,12 +34,14 @@
         .top-bar {
             position: absolute; top: env(safe-area-inset-top, 12px); left: 50%; transform: translateX(-50%);
             width: 88%; max-width: 380px; 
+            /* 磨砂效果 */
             background: var(--g); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             padding: 8px 16px; border-radius: 24px; box-shadow: var(--s); z-index: 100;
             display: flex; justify-content: space-between; align-items: center;
         }
         .lang-info { font-size: 13px; font-weight: 700; color: #1d1d1f; }
-        select { border: none; background: rgba(240, 240, 240, 0.8); padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
+        /* 下拉框也跟随变得更透明 */
+        select { border: none; background: rgba(255, 255, 255, 0.4); padding: 6px 12px; border-radius: 12px; font-size: 12px; color: var(--p); font-weight: 600; outline: none; }
 
         /* 底部操作按钮 */
         .btn-ui {
@@ -51,24 +54,18 @@
         .btn-refresh { left: 20px; }
         .btn-re { right: 20px; }
 
-        /* 修改重点：大号半透明引导气泡 */
+        /* 大号半透明引导气泡 */
         .install-toast {
             position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+            width: 75%; max-width: 400px; padding: 25px 20px; 
             
-            /* 尺寸调整：宽度增加至屏幕75%，高度通过 padding 撑大 */
-            width: 75%; max-width: 400px;
-            padding: 25px 20px; 
-            
-            /* 视觉调整：更透明 + 强磨砂 */
-            background: rgba(0, 0, 0, 0.55); 
+            /* 气泡保持较深背景以保证文字可读性，但也增加了磨砂感 */
+            background: rgba(0, 0, 0, 0.60); 
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             
-            /* 文字居中 */
             display: flex; justify-content: center; align-items: center;
             color: #fff; text-align: center;
-            
-            border-radius: 50px; 
-            font-size: 15px; font-weight: 600;
+            border-radius: 50px; font-size: 15px; font-weight: 600;
             box-shadow: 0 10px 40px rgba(0,0,0,0.25); z-index: 200;
             opacity: 0; pointer-events: none; transition: opacity 0.6s ease;
         }
@@ -96,7 +93,7 @@
     </select>
 </div>
 
-<div id="iTip" class="install-toast">Add to Home Screen for better experience 📱</div>
+<div id="iTip" class="install-toast">Add to Home Screen for easy access 📱</div>
 
 <div class="btn-ui btn-refresh" onclick="location.reload()">
     <svg viewBox="0 0 24 24" width="26" height="26" fill="#FF3B30"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-8 3.58-8 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
@@ -109,12 +106,14 @@
 <div id="map"></div>
 
 <script>
+    // 更新了 Toast 提示语 (P字段)
     const i18n = {
-        en:{n:"English",t:"Toilet",g:"Open App", p:"Add to Home Screen 📱"}, 
-        ko:{n:"한국어",t:"화장실",g:"앱 열기", p:"홈 화면에 추가하세요 📱"},
-        ja:{n:"日本語",t:"トイレ",g:"アプリ", p:"ホーム画面に追加 📱"}, 
-        es:{n:"Español",t:"Baño",g:"Abrir", p:"Añadir a pantalla de inicio 📱"}, 
-        fr:{n:"Français",t:"Toilettes",g:"Ouvrir", p:"Ajouter à l'écran d'accueil 📱"}
+        en:{n:"English",t:"Toilet",g:"Open App", p:"Add to Home Screen for easy access 📱"}, 
+        ko:{n:"한국어",t:"화장실",g:"앱 열기", p:"나중에 사용하기 쉽도록 홈 화면에 추가하세요 📱"},
+        ja:{n:"日本語",t:"トイレ",g:"アプリ", p:"便利な使い方：ホーム画面に追加 📱"}, 
+        zh:{n:"中文",t:"厕所",g:"打开应用", p:"请将书签添加到桌面方便后续使用 📱"},
+        es:{n:"Español",t:"Baño",g:"Abrir", p:"Añadir a pantalla de inicio para acceso fácil 📱"}, 
+        fr:{n:"Français",t:"Toilettes",g:"Ouvrir", p:"Ajouter à l'écran d'accueil pour un accès facile 📱"}
     };
 
     let curL='en', map, ps, geo, walker, userPos=null, userM, routeL, timer;
@@ -137,7 +136,15 @@
         const interval = 90 * 24 * 60 * 60 * 1000; 
         if (!lastPrompt || (now - lastPrompt > interval)) {
             const tip = document.getElementById('iTip');
-            tip.innerText = i18n[curL].p; 
+            // 自动检测是否为中文环境，如果是则直接显示中文，否则显示当前语言
+            // 这里我们简化逻辑，跟随右上角语言选择，或者默认尝试匹配中文
+            if (curL === 'en' && navigator.language.startsWith('zh')) {
+                 // 默认情况如果系统是中文，使用中文提示
+                 tip.innerText = i18n['zh'].p;
+            } else {
+                 tip.innerText = i18n[curL] ? i18n[curL].p : i18n['zh'].p;
+            }
+
             setTimeout(() => {
                 tip.classList.add('show');
                 localStorage.setItem('bj_install_prompt_time', now);
